@@ -63,8 +63,10 @@ public class MainActivity extends AppCompatActivity {
 
     private ListView lvUsers;
     int currentPage = 1;
+    int totalPages=100;
+    paging p  = new paging();
     userAdapter adapter;
-    private String URL = "https://api.github.com/search/users?q=all&score%3E+language:java&type=user&per_page=10";
+    private String URL = "https://api.github.com/search/users?q=all&score%3E+language:java&type=user&per_page=20";
     ProgressDialog pDialog;
     ArrayList<String> usernames;
 
@@ -95,34 +97,22 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-
+/*
         Button btnLoad = new Button(MainActivity.this);
         btnLoad.setText("Load more");
 
         lvUsers.addFooterView(btnLoad);
 
-       /* btnLoad.setOnClickListener(new View.OnClickListener(){
+       btnLoad.setOnClickListener(new View.OnClickListener(){
 
             @Override
             public void onClick(View v) {
                 currentPage+=1;
-                new LoadMore.execute(currentPage);
+
+                ;
             }
 
     });*/
-
-        /*lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
-            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                UserModel usermodel = usermodellist.get(position); // getting the model
-                final View AvatarView = findViewById(R.id.ivAvatar);
-                Intent intent = new Intent(MainActivity.this, Details.class);
-                ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this, AvatarView, "image");
-                intent.putExtra("usermodel", new Gson().toJson(usermodel));
-                startActivity(intent, options.toBundle());
-            }
-        });*/
 
 
     }
@@ -277,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(final List<UserModel> result) {
             super.onPostExecute(result);
             if (result!=null){       //umjesto zadnjeg argumenta je result dolje p.generatePage(currentPage,totalPages,result)
-                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,result);
+                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,result));
 
                 lvUsers.setAdapter(adapter);
                 lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
@@ -292,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(intent, options.toBundle());
                     }
                 });
-               /* final Button btnLoad = new Button(MainActivity.this);
+               final Button btnLoad = new Button(MainActivity.this);
                 btnLoad.setText("Load more");
                 btnLoad.setWidth(200);
 
@@ -312,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
 
                     }
 
-                });*/
+                });
 
 
 
