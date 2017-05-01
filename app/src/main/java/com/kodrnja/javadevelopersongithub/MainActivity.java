@@ -62,11 +62,11 @@ import static android.R.id.list;
 public class MainActivity extends AppCompatActivity {
 
     private ListView lvUsers;
-    int currentPage=1;
+    int currentPage = 1;
     userAdapter adapter;
-    private String URL = "https://api.github.com/search/users?q=all&score%3E+language:java&type=user&per_page=20";
+    private String URL = "https://api.github.com/search/users?q=all&score%3E+language:java&type=user&per_page=10";
     ProgressDialog pDialog;
-    ArrayList<UserModel> users;
+    ArrayList<String> usernames;
 
 
     @Override
@@ -83,13 +83,12 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         ImageLoader.getInstance().init(config);
 
-        lvUsers = (ListView)findViewById(R.id.lvUsers);
+        lvUsers = (ListView) findViewById(R.id.lvUsers);
 
-        result=new ArrayList<UserModel>();
+
 
         // treba dohvatiti prvu stranu; 10 elemenata
-
-        DefaultHttpClient httpClient = new DefaultHttpClient();
+        new fetchdata().execute(URL);
 
 
 
@@ -102,28 +101,435 @@ public class MainActivity extends AppCompatActivity {
 
         lvUsers.addFooterView(btnLoad);
 
-        btnLoad.setOnClickListener(new View.OnClickListener(){
+       /* btnLoad.setOnClickListener(new View.OnClickListener(){
 
             @Override
             public void onClick(View v) {
-
-                new LoadMore.execute();
+                currentPage+=1;
+                new LoadMore.execute(currentPage);
             }
 
-    });
+    });*/
 
-        lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
+        /*lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
             @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                UserModel usermodel = result.get(position); // getting the model
+                UserModel usermodel = usermodellist.get(position); // getting the model
                 final View AvatarView = findViewById(R.id.ivAvatar);
                 Intent intent = new Intent(MainActivity.this, Details.class);
-                ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this,AvatarView,"image");
+                ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this, AvatarView, "image");
                 intent.putExtra("usermodel", new Gson().toJson(usermodel));
                 startActivity(intent, options.toBundle());
             }
-        });
+        });*/
+
+
+    }
+    public class fetchdata extends AsyncTask<String, String, List<UserModel>> {
+
+
+
+
+        @Override
+        protected List<UserModel> doInBackground(String... params) {
+
+//            ArrayList<String> usernameList =null;
+            BufferedReader reader = null;
+
+            HttpURLConnection connection = null;
+
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                InputStream stream = connection.getInputStream();
+
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+
+                String line = "";
+
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                }
+
+                String finalJson = buffer.toString();
+
+                JSONObject parentObject = new JSONObject(finalJson);
+
+                JSONArray parentArray = parentObject.getJSONArray("items");
+                StringBuffer finalBufferedData = new StringBuffer();
+                List<UserModel> usermodellist = new ArrayList<>();
+                List<String> userUrl = new ArrayList<>();
+
+
+                for (int i = 0; i < parentArray.length(); i++) {
+                    JSONObject finalObject = parentArray.getJSONObject(i);
+                    UserModel usermodel=new UserModel();
+                    usermodel.setUsername(finalObject.getString("login"));
+                    usermodel.setAvatar(finalObject.getString("avatar_url"));
+                    userUrl.add("https://api.github.com/users/" + usermodel.getUsername());
+
+                    HttpURLConnection conn=null;
+                    BufferedReader read = null;
+                    try {
+                        URL myUrl= new URL("https://api.github.com/users/");
+                        URL url1 = new URL(myUrl,usermodel.getUsername());
+                        conn = (HttpURLConnection) url1.openConnection();
+                        conn.connect();
+
+                        InputStream stream1 = conn.getInputStream();
+
+                        read = new BufferedReader(new InputStreamReader(stream1));
+                        StringBuffer buffer1 = new StringBuffer();
+
+                        String line1 = "";
+
+
+                        while ((line1 = read.readLine()) != null) {
+                            buffer1.append(line1);
+                        }
+
+                        String finalJson1 = buffer1.toString();
+
+                        JSONObject data = new JSONObject(finalJson1);
+                        /*if (data==null){
+                            Toast.makeText(getApplicationContext(), "Nema JSONA.", Toast.LENGTH_SHORT).show();
+                        }*/
+                        usermodel.setUsername(data.getString("login"));
+                        usermodel.setAvatar(data.getString("avatar_url"));
+                        if (data.getString("location")!=null){
+                            usermodel.setLocation(data.getString("location"));}
+                        else{
+                            usermodel.setLocation("Location unknown");
+                        }
+                        usermodel.setFollowers(data.getInt("followers"));
+                        if (data.getString("email")!=null){
+                            usermodel.setEmail(data.getString("email"));}
+                        else{
+                            usermodel.setEmail("Email unknown");
+                        }
+                        String reg = data.getString("created_at").substring(0, 10);
+                        usermodel.setReg_date(reg);
+
+                        usermodellist.add(usermodel);
+
+
+                    }catch(MalformedURLException e){e.printStackTrace();
+                    }finally {
+                        if(conn!= null) {
+                            conn.disconnect();
+                        }
+                        try {
+                            if(read != null) {
+                                read.close();
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+
+
+                    //
+
+
+
+                }
+                if (usermodellist.size() > 0) {
+                    Collections.sort(usermodellist, new Comparator<UserModel>() {
+                        @Override
+                        public int compare(final UserModel object1, final UserModel object2) {
+                            String s1 = object1.getUsername().toLowerCase();
+                            String s2 =  object2.getUsername().toLowerCase();
+
+                            return s1.compareTo(s2);
+                        }
+                    });
+                }
+              //  totalPages=usermodellist.size();
+                return usermodellist;
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }finally {
+                if(connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if(reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            // tu for petlja po svim userima i izvući ostale informacije
+
+            return null;}
+
+        @Override
+        protected void onPostExecute(final List<UserModel> result) {
+            super.onPostExecute(result);
+            if (result!=null){       //umjesto zadnjeg argumenta je result dolje p.generatePage(currentPage,totalPages,result)
+                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,result);
+
+                lvUsers.setAdapter(adapter);
+                lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
+                    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        UserModel usermodel = result.get(position); // getting the model
+                        final View AvatarView = findViewById(R.id.ivAvatar);
+                        Intent intent = new Intent(MainActivity.this, Details.class);
+                        ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this,AvatarView,"image");
+                        intent.putExtra("usermodel", new Gson().toJson(usermodel));
+                        startActivity(intent, options.toBundle());
+                    }
+                });
+               /* final Button btnLoad = new Button(MainActivity.this);
+                btnLoad.setText("Load more");
+                btnLoad.setWidth(200);
+
+
+
+                lvUsers.addFooterView(btnLoad);
+               btnLoad.setOnClickListener(new View.OnClickListener(){
+
+                    public void onClick(View view){
+
+                        currentPage+=1;
+                        if (totalPages<=currentPage*10){
+                            btnLoad.setEnabled(false);
+                        }
+                       // userAdapter adapter1 = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,p.generatePage(currentPage,totalPages,result)));
+                        lvUsers.setAdapter(adapter);
+
+                    }
+
+                });*/
+
+
+
+            }
+
+            else{
+                Toast.makeText(getApplicationContext(), "Nema liste.", Toast.LENGTH_SHORT).show();
+            }
+
+
+            //data to the list
+        }
+
+
+    }
+
+
+
+    public class LoadMore extends AsyncTask<String, String, List<UserModel>> {
+
+
+
+
+        @Override
+        protected List<UserModel> doInBackground(String... params) {
+
+//            ArrayList<String> usernameList =null;
+            BufferedReader reader = null;
+
+            HttpURLConnection connection = null;
+
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                InputStream stream = connection.getInputStream();
+
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+
+                String line = "";
+
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line);
+                }
+
+                String finalJson = buffer.toString();
+
+                JSONObject parentObject = new JSONObject(finalJson);
+
+                JSONArray parentArray = parentObject.getJSONArray("items");
+                StringBuffer finalBufferedData = new StringBuffer();
+                List<UserModel> usermodellist = new ArrayList<>();
+                List<String> userUrl = new ArrayList<>();
+
+
+                for (int i = 0; i < parentArray.length(); i++) {
+                    JSONObject finalObject = parentArray.getJSONObject(i);
+                    UserModel usermodel=new UserModel();
+                    usermodel.setUsername(finalObject.getString("login"));
+                    usermodel.setAvatar(finalObject.getString("avatar_url"));
+                    userUrl.add("https://api.github.com/users/" + usermodel.getUsername());
+
+                    HttpURLConnection conn=null;
+                    BufferedReader read = null;
+                    try {
+                        URL myUrl= new URL("https://api.github.com/users/");
+                        URL url1 = new URL(myUrl,usermodel.getUsername());
+                        conn = (HttpURLConnection) url1.openConnection();
+                        conn.connect();
+
+                        InputStream stream1 = conn.getInputStream();
+
+                        read = new BufferedReader(new InputStreamReader(stream1));
+                        StringBuffer buffer1 = new StringBuffer();
+
+                        String line1 = "";
+
+
+                        while ((line1 = read.readLine()) != null) {
+                            buffer1.append(line1);
+                        }
+
+                        String finalJson1 = buffer1.toString();
+
+                        JSONObject data = new JSONObject(finalJson1);
+                        /*if (data==null){
+                            Toast.makeText(getApplicationContext(), "Nema JSONA.", Toast.LENGTH_SHORT).show();
+                        }*/
+                        usermodel.setUsername(data.getString("login"));
+                        usermodel.setAvatar(data.getString("avatar_url"));
+                        if (data.getString("location")!=null){
+                            usermodel.setLocation(data.getString("location"));}
+                        else{
+                            usermodel.setLocation("Location unknown");
+                        }
+                        usermodel.setFollowers(data.getInt("followers"));
+                        if (data.getString("email")!=null){
+                            usermodel.setEmail(data.getString("email"));}
+                        else{
+                            usermodel.setEmail("Email unknown");
+                        }
+                        String reg = data.getString("created_at").substring(0, 10);
+                        usermodel.setReg_date(reg);
+
+                        usermodellist.add(usermodel);
+
+
+                    }catch(MalformedURLException e){e.printStackTrace();
+                    }finally {
+                        if(conn!= null) {
+                            conn.disconnect();
+                        }
+                        try {
+                            if(read != null) {
+                                read.close();
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+
+
+                    //
+
+
+
+                }
+                if (usermodellist.size() > 0) {
+                    Collections.sort(usermodellist, new Comparator<UserModel>() {
+                        @Override
+                        public int compare(final UserModel object1, final UserModel object2) {
+                            String s1 = object1.getUsername().toLowerCase();
+                            String s2 =  object2.getUsername().toLowerCase();
+
+                            return s1.compareTo(s2);
+                        }
+                    });
+                }
+                //  totalPages=usermodellist.size();
+                return usermodellist;
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }finally {
+                if(connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if(reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            // tu for petlja po svim userima i izvući ostale informacije
+
+            return null;}
+
+        @Override
+        protected void onPostExecute(final List<UserModel> result) {
+            super.onPostExecute(result);
+            if (result!=null){
+                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,result.subList(0,10));
+
+                lvUsers.setAdapter(adapter);
+                lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
+                    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        UserModel usermodel = result.get(position); // getting the model
+                        final View AvatarView = findViewById(R.id.ivAvatar);
+                        Intent intent = new Intent(MainActivity.this, Details.class);
+                        ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this,AvatarView,"image");
+                        intent.putExtra("usermodel", new Gson().toJson(usermodel));
+                        startActivity(intent, options.toBundle());
+                    }
+                });
+               /* final Button btnLoad = new Button(MainActivity.this);
+                btnLoad.setText("Load more");
+                btnLoad.setWidth(200);
+
+
+
+                lvUsers.addFooterView(btnLoad);
+               btnLoad.setOnClickListener(new View.OnClickListener(){
+
+                    public void onClick(View view){
+
+                        currentPage+=1;
+                        if (totalPages<=currentPage*10){
+                            btnLoad.setEnabled(false);
+                        }
+                       // userAdapter adapter1 = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,p.generatePage(currentPage,totalPages,result)));
+                        lvUsers.setAdapter(adapter);
+
+                    }
+
+                });*/
+
+
+
+            }
+
+            else{
+                Toast.makeText(getApplicationContext(), "Nema liste.", Toast.LENGTH_SHORT).show();
+            }
+
+
+            //data to the list
+        }
 
 
     }
@@ -144,23 +550,12 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    public class userAdapter extends ArrayAdapter{
+    public class userAdapter extends ArrayAdapter {
         public List<UserModel> usermodellist;
         private int resource;
         private LayoutInflater inflater;
-        public userAdapter( Context context, int resource, List<UserModel> objects) {
+
+        public userAdapter(Context context, int resource, List<UserModel> objects) {
             super(context, resource, objects);
             usermodellist = objects;
             this.resource = resource;
@@ -169,23 +564,22 @@ public class MainActivity extends AppCompatActivity {
 
         @NonNull
         @Override
-        public View getView(int position,  View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, ViewGroup parent) {
 
             ViewHolder holder = null;
 
-            if (convertView == null) {holder = new ViewHolder();
+            if (convertView == null) {
+                holder = new ViewHolder();
                 convertView = inflater.inflate(resource, null);
-                holder.ivAvatar = (ImageView)convertView.findViewById(R.id.ivAvatar);
-                holder.tvUsername = (TextView)convertView.findViewById(R.id.tvUsername);
-                holder.tvRegdate = (TextView)convertView.findViewById(R.id.tvRegdate);
-                holder.tvFollowers = (TextView)convertView.findViewById(R.id.tvFollowers);
+                holder.ivAvatar = (ImageView) convertView.findViewById(R.id.ivAvatar);
+                holder.tvUsername = (TextView) convertView.findViewById(R.id.tvUsername);
+                holder.tvRegdate = (TextView) convertView.findViewById(R.id.tvRegdate);
+                holder.tvFollowers = (TextView) convertView.findViewById(R.id.tvFollowers);
                 //holder.btnLoad =(Button)convertView.findViewById(R.id.btnLoad);
                 convertView.setTag(holder);
-            }else {
+            } else {
                 holder = (ViewHolder) convertView.getTag();
             }
-
-
 
 
             holder.tvUsername.setText(usermodellist.get(position).getUsername());
@@ -193,13 +587,13 @@ public class MainActivity extends AppCompatActivity {
             holder.tvRegdate.setText("Date of registration:" + usermodellist.get(position).getReg_date());
 */
             //  holder.tvUsername.setText("Username:" );
-            holder.tvFollowers.setText("Number of followers:"+ usermodellist.get(position).getFollowers());
-            holder.tvRegdate.setText("Registration date:"+usermodellist.get(position).getReg_date());
+            holder.tvFollowers.setText("Number of followers:" + usermodellist.get(position).getFollowers());
+            holder.tvRegdate.setText("Registration date:" + usermodellist.get(position).getReg_date());
 
-            final ProgressBar progressBar = (ProgressBar)convertView.findViewById(R.id.progressBar);
+            final ProgressBar progressBar = (ProgressBar) convertView.findViewById(R.id.progressBar);
 
             final ViewHolder finalHolder = holder;
-            ImageLoader.getInstance().displayImage(usermodellist.get(position).getAvatar(), holder.ivAvatar,new ImageLoadingListener() {
+            ImageLoader.getInstance().displayImage(usermodellist.get(position).getAvatar(), holder.ivAvatar, new ImageLoadingListener() {
                 @Override
                 public void onLoadingStarted(String imageUri, View view) {
                     progressBar.setVisibility(View.VISIBLE);
@@ -226,12 +620,11 @@ public class MainActivity extends AppCompatActivity {
             });
 
 
-
             return convertView;
         }
 
 
-        class ViewHolder{
+        class ViewHolder {
             private ImageView ivAvatar;
             private TextView tvUsername;
             private TextView tvFollowers;
@@ -241,12 +634,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
-
-
-
-
-
-
-
     }
+
+}

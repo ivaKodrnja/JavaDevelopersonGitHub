@@ -9,6 +9,6 @@
     </style>
 
     <style name="BlueTheme" parent="AppTheme">
-        <item name="android:background">@color/colorPrimary</item>
+        <item name="android:background">#00BFFF</item>
     </style>
 </resources>

@@ -44,6 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Username."
+                android:textColor="#27a616"
                 android:textAppearance="?android:attr/textAppearanceLarge" />
 
 
@@ -52,12 +53,14 @@
                        android:layout_width="wrap_content"
                        android:layout_height="wrap_content"
                        android:text="Registration date:"
+                       android:textColor="#FFFFFF"
                        android:textAppearance="?android:attr/textAppearanceSmall" />
             <TextView
                 android:id="@+id/tvFollowers"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Number of followers:"
+                android:textColor="#FFFFFF"
                 android:textAppearance="?android:attr/textAppearanceSmall" />
 
         </LinearLayout>
