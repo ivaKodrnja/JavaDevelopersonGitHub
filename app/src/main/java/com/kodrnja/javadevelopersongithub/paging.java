@@ -11,20 +11,27 @@ import java.util.List;
 
 public class paging {
 
-    public List<UserModel> generatePage(int currentPage,int totalPages, List<UserModel> usermodellist){
 
-        int startItem = currentPage*11;
+    public static final int ITEMS_PER_PAGE=10;
+
+    public List<UserModel> generatePage(int currentPage, int totalPages,int TOTAL_NUM_ITEMS, List<UserModel> usermodellist){
 
 
-        List<UserModel> pageData = new ArrayList<>();
 
-        if(currentPage==totalPages/10 && totalPages%10>0){
+        int ITEMS_REMAINED=TOTAL_NUM_ITEMS%ITEMS_PER_PAGE;
+        int LAST_PAGE=TOTAL_NUM_ITEMS/ITEMS_PER_PAGE;
+        int startItem = currentPage*ITEMS_PER_PAGE;
+        int numofData = ITEMS_PER_PAGE;
 
-            for(int i=startItem;i<startItem+totalPages%10;i++){
+        ArrayList<UserModel> pageData = new ArrayList<>();
+
+        if(currentPage==LAST_PAGE && ITEMS_REMAINED>0){
+
+            for(int i=startItem;i<startItem+ITEMS_REMAINED;i++){
                 pageData.add(usermodellist.get(i));
             }
         }else{
-            for(int i=startItem;i<startItem+9;i++){
+            for(int i=startItem;i<startItem+numofData;i++){
                 pageData.add(usermodellist.get(i));
             }
         }

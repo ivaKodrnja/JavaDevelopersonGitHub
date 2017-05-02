@@ -36,6 +36,7 @@ import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import com.google.gson.Gson;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,11 +63,12 @@ import static android.R.id.list;
 public class MainActivity extends AppCompatActivity {
 
     private ListView lvUsers;
-    int currentPage = 1;
-    int totalPages=100;
+    int currentPage =0;
+
+    int totalPages=0;
     paging p  = new paging();
     userAdapter adapter;
-    private String URL = "https://api.github.com/search/users?q=all&score%3E+language:java&type=user&per_page=20";
+    private String URL = "https://api.github.com/search/users?q=all&language:java&type=user&per_page=1000";
     ProgressDialog pDialog;
     ArrayList<String> usernames;
 
@@ -88,244 +90,29 @@ public class MainActivity extends AppCompatActivity {
         lvUsers = (ListView) findViewById(R.id.lvUsers);
 
 
-
-        // treba dohvatiti prvu stranu; 10 elemenata
         new fetchdata().execute(URL);
 
 
-
-
-
-
-/*
-        Button btnLoad = new Button(MainActivity.this);
-        btnLoad.setText("Load more");
-
-        lvUsers.addFooterView(btnLoad);
-
-       btnLoad.setOnClickListener(new View.OnClickListener(){
-
-            @Override
-            public void onClick(View v) {
-                currentPage+=1;
-
-                ;
-            }
-
-    });*/
-
-
     }
+
+
+
     public class fetchdata extends AsyncTask<String, String, List<UserModel>> {
 
-
-
-
         @Override
-        protected List<UserModel> doInBackground(String... params) {
-
-//            ArrayList<String> usernameList =null;
-            BufferedReader reader = null;
-
-            HttpURLConnection connection = null;
-
-
-            try {
-                URL url = new URL(params[0]);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                InputStream stream = connection.getInputStream();
-
-                reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
-
-                String line = "";
-
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-
-                String finalJson = buffer.toString();
-
-                JSONObject parentObject = new JSONObject(finalJson);
-
-                JSONArray parentArray = parentObject.getJSONArray("items");
-                StringBuffer finalBufferedData = new StringBuffer();
-                List<UserModel> usermodellist = new ArrayList<>();
-                List<String> userUrl = new ArrayList<>();
-
-
-                for (int i = 0; i < parentArray.length(); i++) {
-                    JSONObject finalObject = parentArray.getJSONObject(i);
-                    UserModel usermodel=new UserModel();
-                    usermodel.setUsername(finalObject.getString("login"));
-                    usermodel.setAvatar(finalObject.getString("avatar_url"));
-                    userUrl.add("https://api.github.com/users/" + usermodel.getUsername());
-
-                    HttpURLConnection conn=null;
-                    BufferedReader read = null;
-                    try {
-                        URL myUrl= new URL("https://api.github.com/users/");
-                        URL url1 = new URL(myUrl,usermodel.getUsername());
-                        conn = (HttpURLConnection) url1.openConnection();
-                        conn.connect();
-
-                        InputStream stream1 = conn.getInputStream();
-
-                        read = new BufferedReader(new InputStreamReader(stream1));
-                        StringBuffer buffer1 = new StringBuffer();
-
-                        String line1 = "";
-
-
-                        while ((line1 = read.readLine()) != null) {
-                            buffer1.append(line1);
-                        }
-
-                        String finalJson1 = buffer1.toString();
-
-                        JSONObject data = new JSONObject(finalJson1);
-                        /*if (data==null){
-                            Toast.makeText(getApplicationContext(), "Nema JSONA.", Toast.LENGTH_SHORT).show();
-                        }*/
-                        usermodel.setUsername(data.getString("login"));
-                        usermodel.setAvatar(data.getString("avatar_url"));
-                        if (data.getString("location")!=null){
-                            usermodel.setLocation(data.getString("location"));}
-                        else{
-                            usermodel.setLocation("Location unknown");
-                        }
-                        usermodel.setFollowers(data.getInt("followers"));
-                        if (data.getString("email")!=null){
-                            usermodel.setEmail(data.getString("email"));}
-                        else{
-                            usermodel.setEmail("Email unknown");
-                        }
-                        String reg = data.getString("created_at").substring(0, 10);
-                        usermodel.setReg_date(reg);
-
-                        usermodellist.add(usermodel);
-
-
-                    }catch(MalformedURLException e){e.printStackTrace();
-                    }finally {
-                        if(conn!= null) {
-                            conn.disconnect();
-                        }
-                        try {
-                            if(read != null) {
-                                read.close();
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
+        protected void onPreExecute(){
+            pDialog=new ProgressDialog(MainActivity.this);
+            pDialog.setMessage("Loading, please wait...");
+            pDialog.setIndeterminate(true);
+            pDialog.setCancelable(false);
+            pDialog.show();
 
 
 
-                    //
 
-
-
-                }
-                if (usermodellist.size() > 0) {
-                    Collections.sort(usermodellist, new Comparator<UserModel>() {
-                        @Override
-                        public int compare(final UserModel object1, final UserModel object2) {
-                            String s1 = object1.getUsername().toLowerCase();
-                            String s2 =  object2.getUsername().toLowerCase();
-
-                            return s1.compareTo(s2);
-                        }
-                    });
-                }
-              //  totalPages=usermodellist.size();
-                return usermodellist;
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }finally {
-                if(connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if(reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            // tu for petlja po svim userima i izvući ostale informacije
-
-            return null;}
-
-        @Override
-        protected void onPostExecute(final List<UserModel> result) {
-            super.onPostExecute(result);
-            if (result!=null){       //umjesto zadnjeg argumenta je result dolje p.generatePage(currentPage,totalPages,result)
-                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,result));
-
-                lvUsers.setAdapter(adapter);
-                lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
-                    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-                    @Override
-                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        UserModel usermodel = result.get(position); // getting the model
-                        final View AvatarView = findViewById(R.id.ivAvatar);
-                        Intent intent = new Intent(MainActivity.this, Details.class);
-                        ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this,AvatarView,"image");
-                        intent.putExtra("usermodel", new Gson().toJson(usermodel));
-                        startActivity(intent, options.toBundle());
-                    }
-                });
-               final Button btnLoad = new Button(MainActivity.this);
-                btnLoad.setText("Load more");
-                btnLoad.setWidth(200);
-
-
-
-                lvUsers.addFooterView(btnLoad);
-               btnLoad.setOnClickListener(new View.OnClickListener(){
-
-                    public void onClick(View view){
-
-                        currentPage+=1;
-                        if (totalPages<=currentPage*10){
-                            btnLoad.setEnabled(false);
-                        }
-                       // userAdapter adapter1 = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,p.generatePage(currentPage,totalPages,result)));
-                        lvUsers.setAdapter(adapter);
-
-                    }
-
-                });
-
-
-
-            }
-
-            else{
-                Toast.makeText(getApplicationContext(), "Nema liste.", Toast.LENGTH_SHORT).show();
-            }
-
-
-            //data to the list
         }
 
 
-    }
-
-
-
-    public class LoadMore extends AsyncTask<String, String, List<UserModel>> {
-
-
-
-
         @Override
         protected List<UserModel> doInBackground(String... params) {
 
@@ -358,6 +145,8 @@ public class MainActivity extends AppCompatActivity {
                 JSONArray parentArray = parentObject.getJSONArray("items");
                 StringBuffer finalBufferedData = new StringBuffer();
                 List<UserModel> usermodellist = new ArrayList<>();
+
+
                 List<String> userUrl = new ArrayList<>();
 
 
@@ -372,8 +161,10 @@ public class MainActivity extends AppCompatActivity {
                     BufferedReader read = null;
                     try {
                         URL myUrl= new URL("https://api.github.com/users/");
-                        URL url1 = new URL(myUrl,usermodel.getUsername());
+                        URL url1 = new URL(myUrl,usermodel.getUsername()+"?client_id=...");
                         conn = (HttpURLConnection) url1.openConnection();
+
+
                         conn.connect();
 
                         InputStream stream1 = conn.getInputStream();
@@ -391,9 +182,7 @@ public class MainActivity extends AppCompatActivity {
                         String finalJson1 = buffer1.toString();
 
                         JSONObject data = new JSONObject(finalJson1);
-                        /*if (data==null){
-                            Toast.makeText(getApplicationContext(), "Nema JSONA.", Toast.LENGTH_SHORT).show();
-                        }*/
+
                         usermodel.setUsername(data.getString("login"));
                         usermodel.setAvatar(data.getString("avatar_url"));
                         if (data.getString("location")!=null){
@@ -446,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
                 }
-                //  totalPages=usermodellist.size();
+                totalPages=usermodellist.size()/10;
                 return usermodellist;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -464,22 +253,24 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-            // tu for petlja po svim userima i izvući ostale informacije
+
 
             return null;}
 
         @Override
         protected void onPostExecute(final List<UserModel> result) {
             super.onPostExecute(result);
+            pDialog.dismiss();
             if (result!=null){
-                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,result.subList(0,10));
+                final userAdapter adapter = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,result.size(),result));
+
 
                 lvUsers.setAdapter(adapter);
                 lvUsers.setOnItemClickListener(new AdapterView.OnItemClickListener() {  // list item click opens a new detailed activity
                     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        UserModel usermodel = result.get(position); // getting the model
+                        UserModel usermodel = p.generatePage(currentPage,totalPages,result.size(),result).get(position); // getting the model
                         final View AvatarView = findViewById(R.id.ivAvatar);
                         Intent intent = new Intent(MainActivity.this, Details.class);
                         ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(MainActivity.this,AvatarView,"image");
@@ -487,53 +278,39 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(intent, options.toBundle());
                     }
                 });
-               /* final Button btnLoad = new Button(MainActivity.this);
+                final Button btnLoad = new Button(MainActivity.this);
                 btnLoad.setText("Load more");
-                btnLoad.setWidth(200);
-
-
-
+                btnLoad.setWidth(400);
                 lvUsers.addFooterView(btnLoad);
-               btnLoad.setOnClickListener(new View.OnClickListener(){
+                btnLoad.setOnClickListener(new View.OnClickListener(){
 
                     public void onClick(View view){
 
                         currentPage+=1;
-                        if (totalPages<=currentPage*10){
+                        if (currentPage==totalPages-1){
                             btnLoad.setEnabled(false);
                         }
-                       // userAdapter adapter1 = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,p.generatePage(currentPage,totalPages,result)));
-                        lvUsers.setAdapter(adapter);
+
+                        userAdapter adapter1 = new userAdapter(getApplicationContext(),R.layout.row,p.generatePage(currentPage,totalPages,result.size(),result));
+                        lvUsers.setAdapter(adapter1);
 
                     }
 
-                });*/
+                });
 
 
 
             }
 
             else{
-                Toast.makeText(getApplicationContext(), "Nema liste.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "No list!", Toast.LENGTH_SHORT).show();
             }
 
 
-            //data to the list
-        }
-
-
-    }
 
 
 
-
-
-
-
-
-
-
-
+    }}
 
 
 
