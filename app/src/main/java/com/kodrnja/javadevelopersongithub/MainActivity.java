@@ -161,7 +161,8 @@ public class MainActivity extends AppCompatActivity {
                     BufferedReader read = null;
                     try {
                         URL myUrl= new URL("https://api.github.com/users/");
-                        URL url1 = new URL(myUrl,usermodel.getUsername()+"?client_id=...");
+                        URL url1 = new URL(myUrl,usermodel.getUsername()+"?client_id=136e972a60ce2565a50d&client_secret=b313ed69f86e789340a5ee8f579a34ac051ed000");
+
                         conn = (HttpURLConnection) url1.openConnection();
 
 
